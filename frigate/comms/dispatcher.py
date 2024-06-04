@@ -48,12 +48,12 @@ class Dispatcher:
     """Handle communication between Frigate and communicators."""
 
     def __init__(
-        self,
-        config: FrigateConfig,
-        config_updater: ConfigPublisher,
-        onvif: OnvifController,
-        ptz_metrics: dict[str, PTZMetricsTypes],
-        communicators: list[Communicator],
+            self,
+            config: FrigateConfig,
+            config_updater: ConfigPublisher,
+            onvif: OnvifController,
+            ptz_metrics: dict[str, PTZMetricsTypes],
+            communicators: list[Communicator],
     ) -> None:
         self.config = config
         self.config_updater = config_updater
@@ -61,19 +61,22 @@ class Dispatcher:
         self.ptz_metrics = ptz_metrics
         self.comms = communicators
 
-        self._camera_settings_handlers: dict[str, Callable] = {
-            "audio": self._on_audio_command,
-            "detect": self._on_detect_command,
-            "improve_contrast": self._on_motion_improve_contrast_command,
-            "ptz_autotracker": self._on_ptz_autotracker_command,
-            "motion": self._on_motion_command,
-            "motion_contour_area": self._on_motion_contour_area_command,
-            "motion_threshold": self._on_motion_threshold_command,
-            "recordings": self._on_recordings_command,
-            "snapshots": self._on_snapshots_command,
-            "birdseye": self._on_birdseye_command,
-            "birdseye_mode": self._on_birdseye_mode_command,
-        }
+        if not self.config.read_only:
+            self._camera_settings_handlers: dict[str, Callable] = {
+                "audio": self._on_audio_command,
+                "detect": self._on_detect_command,
+                "improve_contrast": self._on_motion_improve_contrast_command,
+                "ptz_autotracker": self._on_ptz_autotracker_command,
+                "motion": self._on_motion_command,
+                "motion_contour_area": self._on_motion_contour_area_command,
+                "motion_threshold": self._on_motion_threshold_command,
+                "recordings": self._on_recordings_command,
+                "snapshots": self._on_snapshots_command,
+                "birdseye": self._on_birdseye_command,
+                "birdseye_mode": self._on_birdseye_mode_command,
+            }
+        else:
+            self._camera_settings_handlers: dict[str, Callable] = {}
 
         for comm in self.comms:
             comm.subscribe(self._receive)
@@ -100,7 +103,10 @@ class Dispatcher:
                 logger.error(f"Received invalid ptz command: {topic}")
                 return
         elif topic == "restart":
-            restart_frigate()
+            if self.config.read_only:
+                logger.info("Frigate is in read-only mode.")
+            else:
+                restart_frigate()
         elif topic == INSERT_MANY_RECORDINGS:
             Recordings.insert_many(payload).execute()
         elif topic == REQUEST_REGION_GRID:
@@ -193,7 +199,7 @@ class Dispatcher:
         self.publish(f"{camera_name}/motion/state", payload, retain=True)
 
     def _on_motion_improve_contrast_command(
-        self, camera_name: str, payload: str
+            self, camera_name: str, payload: str
     ) -> None:
         """Callback for improve_contrast topic."""
         motion_settings = self.config.cameras[camera_name].motion
@@ -328,10 +334,10 @@ class Dispatcher:
         try:
             if "preset" in payload.lower():
                 command = OnvifCommandEnum.preset
-                param = payload.lower()[payload.index("_") + 1 :]
+                param = payload.lower()[payload.index("_") + 1:]
             elif "move_relative" in payload.lower():
                 command = OnvifCommandEnum.move_relative
-                param = payload.lower()[payload.index("_") + 1 :]
+                param = payload.lower()[payload.index("_") + 1:]
             else:
                 command = OnvifCommandEnum[payload.lower()]
                 param = ""

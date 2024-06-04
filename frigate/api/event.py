@@ -606,6 +606,11 @@ def set_sub_label(id):
 
 @EventBp.route("/events/<id>", methods=("DELETE",))
 def delete_event(id):
+    if current_app.frigate_config.read_only:
+        return make_response(
+            jsonify({"success": False, "message": "Frigate is in read-only mode."}), 403
+        )
+
     try:
         event = Event.get(Event.id == id)
     except DoesNotExist:

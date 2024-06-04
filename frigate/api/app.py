@@ -169,6 +169,10 @@ def stats_history():
 @bp.route("/config")
 def config():
     config_obj: FrigateConfig = current_app.frigate_config
+
+    if config_obj.read_only:
+        return {"success": False, "message": "Frigate is in read-only mode."}, 403
+
     config: dict[str, dict[str, any]] = config_obj.model_dump(
         mode="json", warnings="none", exclude_none=True
     )
@@ -205,6 +209,9 @@ def config():
 
 @bp.route("/config/raw")
 def config_raw():
+    if current_app.frigate_config.read_only:
+        return {"success": False, "message": "Frigate is in read-only mode."}, 403
+
     config_file = os.environ.get("CONFIG_FILE", "/config/config.yml")
 
     # Check if we can use .yaml instead of .yml
@@ -227,6 +234,9 @@ def config_raw():
 
 @bp.route("/config/save", methods=["POST"])
 def config_save():
+    if current_app.frigate_config.read_only:
+        return {"success": False, "message": "Frigate is in read-only mode."}, 403
+
     save_option = request.args.get("save_option")
 
     new_config = request.get_data().decode()
@@ -310,6 +320,9 @@ def config_save():
 
 @bp.route("/config/set", methods=["PUT"])
 def config_set():
+    if current_app.frigate_config.read_only:
+        return {"success": False, "message": "Frigate is in read-only mode."}, 403
+
     config_file = os.environ.get("CONFIG_FILE", f"{CONFIG_DIR}/config.yml")
 
     # Check if we can use .yaml instead of .yml
@@ -515,6 +528,9 @@ def logs(service: str):
 
 @bp.route("/restart", methods=["POST"])
 def restart():
+    if current_app.frigate_config.read_only:
+        return {"success": False, "message": "Frigate is in read-only mode."}, 403
+
     try:
         restart_frigate()
     except Exception as e:

@@ -1303,6 +1303,7 @@ def verify_motion_and_detect(camera_config: CameraConfig) -> ValueError | None:
 
 
 class FrigateConfig(FrigateBaseModel):
+    read_only: bool = Field(title="Enable read-only mode.", default=False)
     mqtt: MqttConfig = Field(title="MQTT configuration.")
     database: DatabaseConfig = Field(
         default_factory=DatabaseConfig, title="Database configuration."
