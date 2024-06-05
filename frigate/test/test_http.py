@@ -211,6 +211,29 @@ class TestHttp(unittest.TestCase):
             event = client.get(f"/events/{id}").json
             assert not event
 
+    def test_delete_event_read_only(self):
+        app = create_app(
+            FrigateConfig(**self.minimal_config, read_only=True),
+            self.db,
+            None,
+            None,
+            None,
+            None,
+            PlusApi(),
+            None,
+        )
+        id = "123456.random"
+
+        with app.test_client() as client:
+            _insert_mock_event(id)
+            event = client.get(f"/events/{id}").json
+            assert event
+            assert event["id"] == id
+            resp = client.delete(f"/events/{id}")
+            assert resp.status_code == 403
+            event = client.get(f"/events/{id}").json
+            assert event
+
     def test_event_retention(self):
         app = create_app(
             FrigateConfig(**self.minimal_config),
@@ -352,6 +375,22 @@ class TestHttp(unittest.TestCase):
             assert config
             assert config["cameras"]["front_door"]
 
+    def test_config_read_only(self):
+        app = create_app(
+            FrigateConfig(**self.minimal_config, read_only=True).runtime_config(),
+            self.db,
+            None,
+            None,
+            None,
+            None,
+            PlusApi(),
+            None,
+        )
+
+        with app.test_client() as client:
+            config = client.get("/config")
+            assert config.status_code == 403
+
     def test_recordings(self):
         app = create_app(
             FrigateConfig(**self.minimal_config).runtime_config(),
@@ -391,8 +430,8 @@ class TestHttp(unittest.TestCase):
 
 
 def _insert_mock_event(
-    id: str,
-    start_time: datetime.datetime = datetime.datetime.now().timestamp(),
+        id: str,
+        start_time: datetime.datetime = datetime.datetime.now().timestamp(),
 ) -> Event:
     """Inserts a basic event model with a given id."""
     return Event.insert(
